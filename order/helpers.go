@@ -1,15 +1,9 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"time"
-
-	okmq "github.com/OneKonsole/sys-queueing"
-
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // ===========================================================================================================
@@ -67,31 +61,6 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 //	produce(&channel, "xxx", "xxx", "application/json", 5 , byte_array_containing_var)
 //
 // ===========================================================================================================
-func produce(
-	channel *amqp.Channel,
-	routingKey string,
-	exchangeName string,
-	contentType string,
-	maxProcessTime int,
-	messageBody []byte) {
-
-	// Messages from this producer must not take more than 5 seconds to be produced
-	channelContext, cancel := context.WithTimeout(context.Background(), time.Duration(maxProcessTime)*time.Second)
-	defer cancel()
-
-	err := channel.PublishWithContext(channelContext,
-		exchangeName,
-		routingKey,
-		false,
-		false,
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  contentType,
-			Body:         messageBody,
-		})
-
-	okmq.FailOnError(err, "Failed to produce messages for provisioning")
-}
 
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()

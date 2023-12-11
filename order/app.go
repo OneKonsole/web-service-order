@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"io"
 	"log"
 
 	"encoding/json"
@@ -16,6 +15,8 @@ import (
 
 	"github.com/gorilla/mux"
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	_ "github.com/lib/pq"
 )
 
 type App struct {
@@ -176,35 +177,30 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	var o oko.Order
 
-	// Read the request body
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	defer r.Body.Close()
-
-	// Create a new reader from the obtained bytes
-	bodyReader := bytes.NewReader(bodyBytes)
-
-	// Decode the JSON payload into the struct
-	decoder := json.NewDecoder(bodyReader)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&o); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	defer r.Body.Close()
 
-	produce(
-		a.MQChannel,
-		"provisioning",
-		"order-service-exchange",
-		"application/json",
-		5,
-		bodyBytes,
-	)
+	if err := o.CreateOrder(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
-	fmt.Printf("\n%v\n", bodyBytes)
+	targetURL := "http://localhost:8020/produce/order"
+
+	buf := new(bytes.Buffer)
+	json.NewEncoder(buf).Encode(o)
+
+	resp, err := http.Post(targetURL, "application/json", buf)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
 	respondWithJSON(w, http.StatusCreated, o)
 }
 
