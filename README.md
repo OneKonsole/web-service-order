@@ -1,4 +1,8 @@
 # One Konsole - Order Service
+## Usage
+docker build -t onekonsole/web-service-order:latest .
+kind load docker-image onekonsole/web-service-order:latest
+kubectl apply -f order-service-definition.yaml
 
 ## Sommaire
 - Généralités
