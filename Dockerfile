@@ -4,12 +4,11 @@ WORKDIR /onekonsole/order-service
 
 COPY go.mod go.sum ./
 
-RUN go get github.com/OneKonsole/order-model
-RUN go get github.com/OneKonsole/sys-queueing
-
 RUN go mod download && go mod verify
 
-RUN go clean -modcache
+RUN go clean --modcache
+
+RUN go mod tidy
 
 COPY . . 
 

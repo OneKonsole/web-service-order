@@ -1,7 +1,7 @@
-github.com/OneKonsole/order-model v0.0.0-20231211131108-853d48fd27ba h1:PGehXA2cC9IGoxdG/HUYSJRneIbC8hwPpF9Ncs4E/vM=
-github.com/OneKonsole/order-model v0.0.0-20231211131108-853d48fd27ba/go.mod h1:gx26gHNAszRPKqg+tIng8MrwyfNGJorNiRfh4hXvA50=
-github.com/OneKonsole/sys-queueing v0.0.0-20231211103852-30dd61473c3e h1:Rgm8sPIlFA0R8L3WCDUQRFCwBgoj8APq96rXNGca498=
-github.com/OneKonsole/sys-queueing v0.0.0-20231211103852-30dd61473c3e/go.mod h1:ZBpQbso4LhoUCKR2NR6Apx+SR1YXY0K9P5QwN8W67Zk=
+github.com/OneKonsole/order-model v0.0.0-20240101144553-ab4cb8d11b91 h1:kZC2NAWsAA9mWUBU6mhlEWGPzO4xJaMWw8S2vUY0OYg=
+github.com/OneKonsole/order-model v0.0.0-20240101144553-ab4cb8d11b91/go.mod h1:gx26gHNAszRPKqg+tIng8MrwyfNGJorNiRfh4hXvA50=
+github.com/OneKonsole/sys-queueing v0.0.0-20231220210209-409aeeef511c h1:5cSuCPytJ10vLQC2UlMIPg0GwYez/L7T3e55lMCroOU=
+github.com/OneKonsole/sys-queueing v0.0.0-20231220210209-409aeeef511c/go.mod h1:ZBpQbso4LhoUCKR2NR6Apx+SR1YXY0K9P5QwN8W67Zk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
