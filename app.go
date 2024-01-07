@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
@@ -43,8 +44,8 @@ type App struct {
 //
 // ===========================================================================================================
 func (a *App) Initialize(user string, password string, dbname string) {
-	connectionString := fmt.Sprintf("postgresql://%s:%s@localhost/%s?sslmode=disable", user, password, dbname)
-	// connectionString := fmt.Sprintf("postgresql://%s:%s@my-postgresql.provisioning.svc.cluster.local/%s?sslmode=disable", user, password, dbname)
+	// connectionString := fmt.Sprintf("postgresql://%s:%s@localhost/%s?sslmode=disable", user, password, dbname)
+	connectionString := fmt.Sprintf("postgresql://%s:%s@my-postgresql.provisioning.svc.cluster.local/%s?sslmode=disable", user, password, dbname)
 
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
@@ -52,8 +53,8 @@ func (a *App) Initialize(user string, password string, dbname string) {
 		log.Fatal(err)
 	}
 
-	a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@localhost:5672/")
-	// a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@my-rabbitmq.provisioning.svc.cluster.local:5672/")
+	// a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@localhost:5672/")
+	a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@my-rabbitmq.provisioning.svc.cluster.local:5672/")
 	a.MQChannel = okmq.NewMQChannel(a.MQConnection)
 	a.Router = mux.NewRouter()
 
@@ -177,6 +178,7 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	var o oko.Order
 	decoder := json.NewDecoder(r.Body)
+	fmt.Print(r.Body)
 	if err := decoder.Decode(&o); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -189,16 +191,17 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// targetURL := "http://localhost:8020/produce/order"
+	targetURL := "http://sys-service-order.provisioning.svc.cluster.local:8020/produce/order"
 
-	// buf := new(bytes.Buffer)
-	// json.NewEncoder(buf).Encode(o)
+	buf := new(bytes.Buffer)
+	json.NewEncoder(buf).Encode(o)
 
-	// resp, err := http.Post(targetURL, "application/json", buf)
-	// if err != nil {
-	// 	respondWithError(w, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
-	// defer resp.Body.Close()
+	resp, err := http.Post(targetURL, "application/json", buf)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer resp.Body.Close()
 
 	respondWithJSON(w, http.StatusCreated, o)
 }
