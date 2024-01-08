@@ -11,19 +11,17 @@ import (
 	"strconv"
 
 	oko "github.com/OneKonsole/order-model"
-	okmq "github.com/OneKonsole/sys-queueing"
 
 	"github.com/gorilla/mux"
-	amqp "github.com/rabbitmq/amqp091-go"
 
 	_ "github.com/lib/pq"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type App struct {
-	Router       *mux.Router
-	DB           *sql.DB
-	MQChannel    *amqp.Channel
-	MQConnection *amqp.Connection
+	Router *mux.Router
+	DB     *sql.DB
 }
 
 // ===========================================================================================================
@@ -54,8 +52,7 @@ func (a *App) Initialize(user string, password string, dbname string) {
 	}
 
 	// a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@localhost:5672/")
-	a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@my-rabbitmq.provisioning.svc.cluster.local:5672/")
-	a.MQChannel = okmq.NewMQChannel(a.MQConnection)
+
 	a.Router = mux.NewRouter()
 
 	a.initializeRoutes()
@@ -184,6 +181,19 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	// Fields validator instance
+	v := validator.New()
+
+	// Custom validations (helpers)
+	v.RegisterValidation("startswithalphanum", startsWithAlphanum)
+	v.RegisterValidation("endswithalphanum", endWithAlphanum)
+	v.RegisterValidation("uuid", isUUID)
+
+	if err := v.Struct(o); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if err := o.CreateOrder(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())

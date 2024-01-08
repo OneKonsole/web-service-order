@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // ===========================================================================================================
@@ -67,4 +72,21 @@ func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	a.Router.ServeHTTP(recorder, req)
 
 	return recorder
+}
+
+func startsWithAlphanum(fl validator.FieldLevel) bool {
+	firstChar, _ := utf8.DecodeLastRuneInString(fl.Field().String())
+	return unicode.IsLetter(firstChar) || unicode.IsDigit(firstChar)
+}
+
+func endWithAlphanum(fl validator.FieldLevel) bool {
+	lastChar, _ := utf8.DecodeLastRuneInString(fl.Field().String())
+	return unicode.IsLetter(lastChar) || unicode.IsDigit(lastChar)
+}
+func isUUID(fl validator.FieldLevel) bool {
+	// Define the expected UUID format using a regular expression
+	uuidPattern := regexp.MustCompile(`^[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}$`)
+
+	// Check if the field matches the expected UUID format
+	return uuidPattern.MatchString(fl.Field().String())
 }

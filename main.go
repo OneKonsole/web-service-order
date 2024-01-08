@@ -9,8 +9,5 @@ func main() {
 
 	a.Run("8010")
 
-	defer a.MQChannel.Close()
-	defer a.MQConnection.Close()
-
 	os.Exit(0)
 }
