@@ -42,16 +42,14 @@ type App struct {
 //
 // ===========================================================================================================
 func (a *App) Initialize(user string, password string, dbname string) {
-	// connectionString := fmt.Sprintf("postgresql://%s:%s@localhost/%s?sslmode=disable", user, password, dbname)
-	connectionString := fmt.Sprintf("postgresql://%s:%s@my-postgresql.provisioning.svc.cluster.local/%s?sslmode=disable", user, password, dbname)
+	connectionString := fmt.Sprintf("postgresql://%s:%s@localhost/%s?sslmode=disable", user, password, dbname)
+	// connectionString := fmt.Sprintf("postgresql://%s:%s@my-postgresql.provisioning.svc.cluster.local/%s?sslmode=disable", user, password, dbname)
 
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// a.MQConnection = okmq.NewMQConnection("amqp://admin:admin@localhost:5672/")
 
 	a.Router = mux.NewRouter()
 
@@ -200,8 +198,8 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// targetURL := "http://localhost:8020/produce/order"
-	targetURL := "http://sys-service-order.provisioning.svc.cluster.local:8020/produce/order"
+	targetURL := "http://localhost:8020/produce/order"
+	// targetURL := "http://sys-service-order.provisioning.svc.cluster.local:8020/produce/order"
 
 	buf := new(bytes.Buffer)
 	json.NewEncoder(buf).Encode(o)
