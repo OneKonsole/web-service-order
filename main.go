@@ -1,13 +1,21 @@
 package main
 
-import "os"
+import (
+	"os"
+)
 
 var a App
+var appConf AppConf
 
 func main() {
-	a.Initialize("root", "root", "order")
+	// Dirty trick to pass conf globally
+	appConf.Initialize()
+	a.AppConf = &appConf
 
-	a.Run("8010")
+	// Init database, field validators, etc...
+	a.Initialize()
+
+	a.Run()
 
 	os.Exit(0)
 }

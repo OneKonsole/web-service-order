@@ -74,6 +74,20 @@ func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 	return recorder
 }
 
+func isValidClusterName(fl validator.FieldLevel) bool {
+	// Define the regular expression pattern
+	clusterNamePattern := "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+
+	// Compile the regular expression
+	regex := regexp.MustCompile(clusterNamePattern)
+
+	// Extract the field value
+	clusterName := fl.Field().String()
+
+	// Check if the clusterName matches the pattern
+	return regex.MatchString(clusterName)
+}
+
 func startsWithAlphanum(fl validator.FieldLevel) bool {
 	firstChar, _ := utf8.DecodeLastRuneInString(fl.Field().String())
 	return unicode.IsLetter(firstChar) || unicode.IsDigit(firstChar)

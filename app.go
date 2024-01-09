@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	"encoding/json"
 	"net/http"
@@ -20,8 +21,19 @@ import (
 )
 
 type App struct {
-	Router *mux.Router
-	DB     *sql.DB
+	Router    *mux.Router
+	DB        *sql.DB
+	Validator *validator.Validate
+	AppConf   *AppConf
+}
+
+type AppConf struct {
+	ServedPort    string `json:"served_port"`     // e.g. "8010"
+	DBUser        string `json:"db_user"`         // e.g. "MyUsername"
+	DBPassword    string `json:"db_password"`     // e.g. "MyPassword1!"
+	DBDestination string `json:"db_URL"`          // e.g. "localhost" || "myservice.mynamespace.svc.cluster.local" || "onekonsole.fr"
+	DBName        string `json:"db_name"`         // e.g. "order"
+	SysServiceUrl string `json:"sys_service_url"` // e.g. "http://localhost:8020/sys-service/"
 }
 
 // ===========================================================================================================
@@ -41,9 +53,12 @@ type App struct {
 //	a.Initialize("testuser","testpassword","mydb")
 //
 // ===========================================================================================================
-func (a *App) Initialize(user string, password string, dbname string) {
-	connectionString := fmt.Sprintf("postgresql://%s:%s@localhost/%s?sslmode=disable", user, password, dbname)
-	// connectionString := fmt.Sprintf("postgresql://%s:%s@my-postgresql.provisioning.svc.cluster.local/%s?sslmode=disable", user, password, dbname)
+func (a *App) Initialize() {
+	connectionString := fmt.Sprintf("postgresql://%s:%s@%s/%s?sslmode=disable",
+		a.AppConf.DBUser,
+		a.AppConf.DBPassword,
+		a.AppConf.DBDestination,
+		a.AppConf.DBName)
 
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
@@ -53,7 +68,23 @@ func (a *App) Initialize(user string, password string, dbname string) {
 
 	a.Router = mux.NewRouter()
 
+	// Helper to validate user inputs concerning orders management
+	a.Validator = validator.New()
+	a.Validator.RegisterValidation("isvalidclustername", isValidClusterName)
+	a.Validator.RegisterValidation("startswithalphanum", startsWithAlphanum)
+	a.Validator.RegisterValidation("endswithalphanum", endWithAlphanum)
+	a.Validator.RegisterValidation("uuid", isUUID)
+
 	a.initializeRoutes()
+}
+
+func (appConf *AppConf) Initialize() {
+	confFile, _ := os.ReadFile("app-configuration.json")
+
+	err := json.Unmarshal([]byte(confFile), &appConf)
+	if err != nil {
+		log.Fatalf("Unable to parse application config file due to : %s", err)
+	}
 }
 
 // ===========================================================================================================
@@ -72,8 +103,8 @@ func (a *App) Initialize(user string, password string, dbname string) {
 //	a.Run("localhost:8010")
 //
 // ===========================================================================================================
-func (a *App) Run(addr string) {
-	log.Fatal(http.ListenAndServe(":8010", a.Router))
+func (a *App) Run() {
+	log.Fatal(http.ListenAndServe(":"+a.AppConf.ServedPort, a.Router))
 }
 
 // ===========================================================================================================
@@ -173,23 +204,15 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	var o oko.Order
 	decoder := json.NewDecoder(r.Body)
-	fmt.Print(r.Body)
+
 	if err := decoder.Decode(&o); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 	defer r.Body.Close()
 
-	// Fields validator instance
-	v := validator.New()
-
-	// Custom validations (helpers)
-	v.RegisterValidation("startswithalphanum", startsWithAlphanum)
-	v.RegisterValidation("endswithalphanum", endWithAlphanum)
-	v.RegisterValidation("uuid", isUUID)
-
-	if err := v.Struct(o); err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
+	if err := a.Validator.Struct(o); err != nil {
+		respondWithError(w, http.StatusBadRequest, "One or more parameters do not match the required format")
 		return
 	}
 
@@ -198,13 +221,12 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetURL := "http://localhost:8020/produce/order"
-	// targetURL := "http://sys-service-order.provisioning.svc.cluster.local:8020/produce/order"
-
+	// Encode order as a HTTP Reader (io.Reader) in order to make request
 	buf := new(bytes.Buffer)
 	json.NewEncoder(buf).Encode(o)
 
-	resp, err := http.Post(targetURL, "application/json", buf)
+	// Contact sys-order service
+	resp, err := http.Post(a.AppConf.SysServiceUrl, "application/json", buf)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -246,6 +268,11 @@ func (a *App) updateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	o.ID = id
+
+	if err := a.Validator.Struct(o); err != nil {
+		respondWithError(w, http.StatusBadRequest, "One or more parameters do not match the required format")
+		return
+	}
 
 	if err := o.UpdateOrder(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
