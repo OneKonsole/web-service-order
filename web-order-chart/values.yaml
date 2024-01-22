@@ -8,11 +8,11 @@ image:
   repository: onekonsole/web-service-order
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: latest
+  tag: ""
 
 imagePullSecrets: []
-nameOverride: "web-order"
-fullnameOverride: "web-order-service"
+nameOverride: ""
+fullnameOverride: ""
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -40,8 +40,8 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
-  port: 8010
+  type: ""
+  port: 80
 
 ingress:
   enabled: false
@@ -60,12 +60,12 @@ ingress:
   #      - chart-example.local
 
 env:
-  secretName: web-order-configuration
-  DB_USER: db_user
-  DB_PASSWORD: db_password
-  DB_URL: db_URL
-  DB_NAME: db_name
-  SYS_SERVICE: sys_service_url
+  secretName: ""
+  DB_USER: ""
+  DB_PASSWORD: ""
+  DB_URL: ""
+  DB_NAME: ""
+  SYS_SERVICE: ""
 
   
 resources: {}
