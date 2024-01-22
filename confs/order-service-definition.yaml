@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: web-order-configuration
+  namespace: provisioning
+data:
+  db_user: cm9vdA==
+  db_password: cm9vdA==
+  db_URL: bXktcG9zdGdyZXNxbC5wcm92aXNpb25pbmc=
+  db_name: b3JkZXI=
+  sys_service_url: aHR0cDovL3N5cy1vcmRlci5wcm92aXNpb25pbmc6ODAyMC9wcm9kdWNlL29yZGVy
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: order-service
+#   namespace: provisioning
+#   labels:
+#     app: order-service
+# spec:  
+#   replicas: 3
+#   selector:
+#     matchLabels:
+#       app: order-service
+#   template:
+#     metadata:
+#       labels:
+#         app: order-service
+#     spec:
+#       containers:
+#       - name: order-service
+#         image: onekonsole/web-service-order:latest
+#         imagePullPolicy: IfNotPresent
+#         command: ["printenv"]
+#         ports:
+#         - containerPort: 8010
+#         env:
+#         - name: served_port
+#           value: "8010"
+#         - name: db_user
+#           valueFrom:
+#             secretKeyRef:
+#               name: web-order-configuration
+#               key: db_user
+#         - name: db_password
+#           valueFrom:
+#             secretKeyRef:
+#               name: web-order-configuration
+#               key: db_password
+#         - name: db_URL
+#           valueFrom:
+#             secretKeyRef:
+#               name: web-order-configuration
+#               key: db_URL
+#         - name: db_name
+#           valueFrom:
+#             secretKeyRef:
+#               name: web-order-configuration
+#               key: db_name
+#         - name: sys_service_url
+#           valueFrom:
+#             secretKeyRef:
+#               name: web-order-configuration
+#               key: sys_service_url
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: order-service
+#   namespace: provisioning
+# spec:
+#   selector:
+#     app: order-service
+#   ports:
+#     - protocol: TCP
+#       port: 8010
+#       targetPort: 8010
+#   type: NodePort

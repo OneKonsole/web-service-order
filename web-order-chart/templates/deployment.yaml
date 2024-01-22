@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "web-order-chart.name" . }}
+  labels:
+    {{- include "web-order-chart.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "web-order-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "web-order-chart.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "web-order-chart.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env: 
+          - name: served_port
+            value: {{ quote .Values.service.port }}
+          - name: db_user
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.DB_USER }}
+          - name: db_password
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.DB_PASSWORD }}
+          - name: db_URL
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.DB_URL }}
+          - name: db_name
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.DB_NAME }}
+          - name: sys_service_url
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.SYS_SERVICE }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      {{- end }}
