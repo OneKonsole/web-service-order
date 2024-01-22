@@ -1,8 +1,0 @@
-{
-    "served_port": "8010",
-    "db_user": "root",
-    "db_password": "root",
-    "db_URL": "my-postgresql.provisioning.svc.cluster.local",
-    "db_name": "order",
-    "sys_service_url": "http://localhost:8020/sys-service/"
-}
