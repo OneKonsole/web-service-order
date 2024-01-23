@@ -55,12 +55,10 @@ type AppConf struct {
 // ===========================================================================================================
 func (a *App) Initialize() {
 
-	fmt.Print("\nInitializing app...\n")
+	fmt.Print("[INFO] .....Initializing app .....\n")
 
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable",
 		a.AppConf.DBDestination, 5432, a.AppConf.DBUser, a.AppConf.DBPassword, a.AppConf.DBName)
-
-	fmt.Print(connectionString)
 
 	var err error
 	a.DB, err = sql.Open("postgres", connectionString)
@@ -68,8 +66,7 @@ func (a *App) Initialize() {
 		panic(err)
 	}
 
-	err = a.DB.Ping()
-	fmt.Printf("\nTESSSSSSSSSSST %s\n", err)
+	fmt.Printf("[INFO] Opened postgresql connection for database %s.\n", a.AppConf.DBName)
 
 	a.Router = mux.NewRouter()
 
@@ -79,6 +76,8 @@ func (a *App) Initialize() {
 	a.Validator.RegisterValidation("startswithalphanum", startsWithAlphanum)
 	a.Validator.RegisterValidation("endswithalphanum", endWithAlphanum)
 	a.Validator.RegisterValidation("uuid", isUUID)
+
+	fmt.Printf("[INFO] ...... Initializing routes ......\n")
 
 	a.initializeRoutes()
 }
@@ -91,7 +90,7 @@ func (appConf *AppConf) Initialize() {
 	appConf.DBName = os.Getenv("db_name")
 	appConf.SysServiceUrl = os.Getenv("sys_service_url")
 
-	fmt.Printf("Appconf: %s\n", appConf)
+	fmt.Printf("[INFO] ...... Initializing app configurations ......\n")
 
 }
 
@@ -140,6 +139,8 @@ func (a *App) getOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("[INFO] Trying to get order id : %d. \n", id)
+
 	o := oko.Order{ID: id}
 	if err := o.GetOrder(a.DB); err != nil {
 		switch err {
@@ -174,6 +175,8 @@ func (a *App) getOrder(w http.ResponseWriter, r *http.Request) {
 func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	start, _ := strconv.Atoi(r.FormValue("start"))
+
+	fmt.Printf("[INFO] Trying to get all orders. \n")
 
 	if count > 10 || count < 1 {
 		count = 10
@@ -210,21 +213,36 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 //
 // ===========================================================================================================
 func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
+
 	var o oko.Order
 	decoder := json.NewDecoder(r.Body)
 
 	if err := decoder.Decode(&o); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		respondWithError(w, http.StatusBadRequest, "[ERROR] Invalid request payload\n")
 		return
 	}
 	defer r.Body.Close()
 
 	if err := a.Validator.Struct(o); err != nil {
-		respondWithError(w, http.StatusBadRequest, "One or more parameters do not match the required format")
+		errMessage := "[ERROR] One or more parameters do not match the required format. \n"
+		fmt.Printf("%s", errMessage)
+		respondWithError(w, http.StatusBadRequest, errMessage)
 		return
 	}
 
+	fmt.Printf("\n[INFO] Order creation requested by %s\n   ---> Cluster name : %s\n   ---> Control plane : %s\n   ---> Monitoring : %s - %d Go\n   ---> Images storage : %d\n   ---> Alerting : %s\n\n\n",
+		o.UserID,
+		o.ClusterName,
+		strconv.FormatBool(o.HasControlPlane),
+		strconv.FormatBool(o.HasControlPlane),
+		o.MonitoringStorage,
+		o.ImageStorage,
+		strconv.FormatBool(o.HasControlPlane),
+	)
+
 	if err := o.CreateOrder(a.DB); err != nil {
+		errMessage := "[ERROR] Could not create order in database.\n"
+		fmt.Printf("%s", errMessage)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -236,6 +254,8 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	// Contact sys-order service
 	resp, err := http.Post(a.AppConf.SysServiceUrl, "application/json", buf)
 	if err != nil {
+		errMessage := "[ERROR] Could not contact sys order.\n"
+		fmt.Printf("%s", errMessage)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -264,29 +284,54 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 func (a *App) updateOrder(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
+	fmt.Printf("[INFO] Asked to update order %d", id)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid order ID")
+		errMessage := "[ERROR] Invalid order ID given in updating.\n"
+		fmt.Printf("%s", errMessage)
+		respondWithError(w, http.StatusBadRequest, errMessage)
 		return
 	}
 	var o oko.Order
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&o); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
+		errMessage := fmt.Sprintf("[ERROR] Invalid request payload when updating order %d.\n", id)
+		fmt.Printf("%s", errMessage)
+		respondWithError(w, http.StatusBadRequest, errMessage)
 		return
 	}
 	defer r.Body.Close()
 	o.ID = id
 
 	if err := a.Validator.Struct(o); err != nil {
-		respondWithError(w, http.StatusBadRequest, "One or more parameters do not match the required format")
+		errMessage := "[ERROR] One or more parameters do not match the required format for update.\n"
+		fmt.Printf("%s", errMessage)
+		respondWithError(w, http.StatusBadRequest, errMessage)
 		return
 	}
-
+	fmt.Printf("\n[INFO] Updating order for user %s\n   ---> Cluster name : %s\n   ---> Control plane : %s\n   ---> Monitoring : %s - %d Go\n   ---> Images storage : %d\n   ---> Alerting : %s\n\n\n",
+		o.UserID,
+		o.ClusterName,
+		strconv.FormatBool(o.HasControlPlane),
+		strconv.FormatBool(o.HasControlPlane),
+		o.MonitoringStorage,
+		o.ImageStorage,
+		strconv.FormatBool(o.HasControlPlane),
+	)
 	if err := o.UpdateOrder(a.DB); err != nil {
+		errMessage := fmt.Sprintf("[ERROR] Couldn't update order %d in database.\n", id)
+		fmt.Printf("%s", errMessage)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
+	fmt.Printf("\n[INFO] Order update done %s\n   ---> Cluster name : %s\n   ---> Control plane : %s\n   ---> Monitoring : %s - %d Go\n   ---> Images storage : %d\n   ---> Alerting : %s\n\n\n",
+		o.UserID,
+		o.ClusterName,
+		strconv.FormatBool(o.HasControlPlane),
+		strconv.FormatBool(o.HasControlPlane),
+		o.MonitoringStorage,
+		o.ImageStorage,
+		strconv.FormatBool(o.HasControlPlane),
+	)
 	respondWithJSON(w, http.StatusOK, o)
 }
 
@@ -311,24 +356,36 @@ func (a *App) deleteOrder(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 
+	fmt.Printf("[INFO] Asked deletion of order %d", id)
+
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid Order ID")
+		errMessage := fmt.Sprintf("[ERROR] Invalid order id (%d) for deletion\n", id)
+		fmt.Printf("%s", errMessage)
+		respondWithError(w, http.StatusBadRequest, errMessage)
 		return
 	}
 
 	checkOrderReq, _ := http.NewRequest("GET", "/order/"+strconv.Itoa(id), nil)
 	checkOrderResp := executeRequest(checkOrderReq)
 
+	fmt.Printf("[INFO] Trying to retrieve  order%d.\n", id)
+
 	if checkOrderResp.Code != 200 {
-		respondWithError(w, http.StatusInternalServerError, "Unexpected order to delete.")
+		errMessage := fmt.Sprintf("[ERROR] Unexpected order (%d) to delete.\n", id)
+		fmt.Printf("%s", errMessage)
+		respondWithError(w, http.StatusInternalServerError, errMessage)
 		return
 	}
 
 	o := oko.Order{ID: id}
 	if err := o.DeleteOrder(a.DB); err != nil {
+		errMessage := fmt.Sprintf("[ERROR] Could not delete order (%d) in database.\n", id)
+		fmt.Printf("%s", errMessage)
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	fmt.Printf("[INFO] Deleted order%d.\n", id)
 
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
