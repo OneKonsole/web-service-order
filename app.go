@@ -223,7 +223,9 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var returnedOrders []oko.OrderFullInfos
-
+		// Désolé pour ce bout de code horrible, il faut s'en prendre
+		// à wolodia et ses demandes de dernière minute alors qu'il ne
+		// lit pas la documentation paypal sur le timeout des orders
 		for i := 0; i < len(orders); i++ {
 			var currentFullOrder oko.OrderFullInfos
 
@@ -238,6 +240,7 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		// "Fin" du bout de code horrible
 		if len(returnedOrders) != len(orders) {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
