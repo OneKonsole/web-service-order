@@ -217,7 +217,6 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 		}
 
 		paypalOrders, err := GetOrderDetails(orderIDs)
-
 		if err != nil {
 			helpers.RespondWithError(w, http.StatusInternalServerError, "Could not retrieve paypal order details")
 			return
@@ -225,21 +224,21 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 
 		var returnedOrders []oko.OrderFullInfos
 
-		if len(orders) == len(paypalOrders) {
-			for i := 0; i < len(orders); i++ {
-				var currentFullOrder oko.OrderFullInfos
-				if orders[i].PaypalID == paypalOrders[i].ID {
-					currentFullOrder.AppOrder = orders[i]
-					currentFullOrder.PaypalOrder = paypalOrders[i]
+		for i := 0; i < len(orders); i++ {
+			var currentFullOrder oko.OrderFullInfos
+
+			currentFullOrder.AppOrder = orders[i]
+
+			returnedOrders = append(returnedOrders, currentFullOrder)
+		}
+		for i := 0; i < len(paypalOrders); i++ {
+			for j := 0; j < len(returnedOrders); j++ {
+				if paypalOrders[i].ID == returnedOrders[j].AppOrder.PaypalID {
+					returnedOrders[j].PaypalOrder = paypalOrders[i]
 				}
-				returnedOrders = append(returnedOrders, currentFullOrder)
 			}
-			if len(returnedOrders) != len(orders) {
-				respondWithError(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-		} else {
-			fmt.Printf("[ERROR] Number of retrieved Paypal orders isn't consistent with internal number of orders. \n")
+		}
+		if len(returnedOrders) != len(orders) {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -277,8 +276,6 @@ func GetOrderDetails(orderIds []string) ([]oko.PaypalOrderDetails, error) {
 			return nil, err
 		}
 
-		fmt.Printf("[DEBUG] Retrieved access token : %s\n", accessToken)
-
 		req.Header.Add("Authorization", "Bearer "+accessToken)
 
 		client := &http.Client{}
@@ -289,16 +286,15 @@ func GetOrderDetails(orderIds []string) ([]oko.PaypalOrderDetails, error) {
 		}
 		defer res.Body.Close()
 
-		var orderDetails oko.PaypalOrderDetails
-		if err := json.NewDecoder(res.Body).Decode(&orderDetails); err != nil {
-			fmt.Printf("[ERROR] Could not decode paypal response to get orders details \n %s", err)
-			return nil, err
+		if res.StatusCode == http.StatusOK {
+			var orderDetails oko.PaypalOrderDetails
+			if err := json.NewDecoder(res.Body).Decode(&orderDetails); err != nil {
+				fmt.Printf("[ERROR] Could not decode paypal response to get orders details \n %s", err)
+				return nil, err
+			}
+			ordersDetails = append(ordersDetails, orderDetails)
 		}
-		fmt.Printf("[INFO] Decoded paypal order \n")
-
-		ordersDetails = append(ordersDetails, orderDetails)
 	}
-
 	return ordersDetails, nil
 }
 
@@ -513,7 +509,7 @@ func (a *App) deleteOrder(w http.ResponseWriter, r *http.Request) {
 //
 // ===========================================================================================================
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/orders", a.getOrders).Methods("GET")                 // Get information about all orders
+	a.Router.HandleFunc("/orders", a.getOrders).Methods("POST")                // Get information about all orders
 	a.Router.HandleFunc("/order", a.createOrder).Methods("POST")               // Create an order and call sys order service
 	a.Router.HandleFunc("/order/{id:[0-9]+}", a.getOrder).Methods("GET")       // Get information about an order
 	a.Router.HandleFunc("/order/{id:[0-9]+}", a.updateOrder).Methods("PUT")    // Update an order
