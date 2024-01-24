@@ -63,6 +63,16 @@ spec:
               secretKeyRef:
                 name: {{ .Values.env.secretName }}
                 key: {{ .Values.env.DB_NAME }}
+          - name: paypal_client_id
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.PAYPAL_CLIENT_ID }}
+          - name: paypal_client_secret
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.env.secretName }}
+                key: {{ .Values.env.PAYPAL_CLIENT_SECRET }}
           - name: sys_service_url
             valueFrom:
               secretKeyRef:

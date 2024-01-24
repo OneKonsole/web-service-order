@@ -205,6 +205,7 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 	if len(userID) > 0 {
 		fmt.Printf("[INFO] Asking all orders for user %s\n", bodyMap["user_id"])
 		orders, err := oko.GetOrders(a.DB, start, count, bodyMap["user_id"])
+		fmt.Printf("[INFO] Got orders in db\n")
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -215,12 +216,14 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 		for _, order := range orders {
 			orderIDs = append(orderIDs, order.PaypalID)
 		}
+		fmt.Printf("[INFO] Parsed order ids\n")
 
 		paypalOrders, err := GetOrderDetails(orderIDs)
 		if err != nil {
 			helpers.RespondWithError(w, http.StatusInternalServerError, "Could not retrieve paypal order details")
 			return
 		}
+		fmt.Printf("[INFO] Got paypal order details \n")
 
 		var returnedOrders []oko.OrderFullInfos
 		// Désolé pour ce bout de code horrible, il faut s'en prendre
@@ -233,6 +236,8 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 
 			returnedOrders = append(returnedOrders, currentFullOrder)
 		}
+		fmt.Printf("[INFO] Parsed app orders in full infos \n")
+
 		for i := 0; i < len(paypalOrders); i++ {
 			for j := 0; j < len(returnedOrders); j++ {
 				if paypalOrders[i].ID == returnedOrders[j].AppOrder.PaypalID {
@@ -240,6 +245,8 @@ func (a *App) getOrders(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		fmt.Printf("[INFO] Parsed paypal orders in full infos \n")
+
 		// "Fin" du bout de code horrible
 		if len(returnedOrders) != len(orders) {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
